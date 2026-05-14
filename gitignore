@@ -1,0 +1,212 @@
+# =============================================================================
+# pydeepseek-tui — .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+wheels/
+share/python-wheels/
+MANIFEST
+
+# -----------------------------------------------------------------------------
+# Pipenv
+# -----------------------------------------------------------------------------
+# NÃO ignorar Pipfile.lock em projetos de aplicação (garante reproducibilidade)
+# Ignorar apenas em bibliotecas puras. Como este é um app, mantemos o lock.
+# Pipfile.lock  <-- intencional: NÃO ignorado
+
+# -----------------------------------------------------------------------------
+# Ambientes virtuais
+# -----------------------------------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.virtualenv/
+
+# -----------------------------------------------------------------------------
+# Variáveis de ambiente e segredos
+# NÃO versionar NUNCA — as chaves ficam em ~/.deepseek-tui/.env
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# -----------------------------------------------------------------------------
+# Configuração local do usuário
+# -----------------------------------------------------------------------------
+~/.deepseek-tui/
+
+# -----------------------------------------------------------------------------
+# Build e distribuição PyPI
+# -----------------------------------------------------------------------------
+dist/
+build/
+*.egg-info/
+.eggs/
+MANIFEST.in.bak
+
+# -----------------------------------------------------------------------------
+# Pytest e cobertura
+# -----------------------------------------------------------------------------
+.pytest_cache/
+.cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+
+# -----------------------------------------------------------------------------
+# Mypy
+# -----------------------------------------------------------------------------
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# -----------------------------------------------------------------------------
+# Ruff
+# -----------------------------------------------------------------------------
+.ruff_cache/
+
+# -----------------------------------------------------------------------------
+# Jupyter Notebooks
+# -----------------------------------------------------------------------------
+.ipynb_checkpoints
+*.ipynb
+
+# -----------------------------------------------------------------------------
+# IDEs e editores
+# -----------------------------------------------------------------------------
+
+# VSCode
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# JetBrains (PyCharm, IntelliJ)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim / Neovim
+*.swp
+*.swo
+*~
+.netrwhist
+Session.vim
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# -----------------------------------------------------------------------------
+# Sistemas operacionais
+# -----------------------------------------------------------------------------
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encdata
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# -----------------------------------------------------------------------------
+# Logs e temporários
+# -----------------------------------------------------------------------------
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+logs/
+tmp/
+temp/
+
+# -----------------------------------------------------------------------------
+# Sessões salvas do agente (ficam em ~/.deepseek-tui/sessions/)
+# -----------------------------------------------------------------------------
+sessions/
+*.session.json
+*.session.json.gz
+
+# -----------------------------------------------------------------------------
+# Snapshots de workspace (rollback)
+# -----------------------------------------------------------------------------
+.snapshots/
+*.snapshot
+
+# -----------------------------------------------------------------------------
+# Textual / TUI
+# -----------------------------------------------------------------------------
+textual.log
+.textual/
+
+# -----------------------------------------------------------------------------
+# Documentação gerada
+# -----------------------------------------------------------------------------
+docs/_build/
+docs/api/
+site/
