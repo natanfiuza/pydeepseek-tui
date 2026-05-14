@@ -208,5 +208,5 @@ textual.log
 # Documentação gerada
 # -----------------------------------------------------------------------------
 docs/_build/
-docs/api/
 site/
+*.txt
