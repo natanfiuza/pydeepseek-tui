@@ -1,0 +1,34 @@
+# Ambientes virtuais e dependências
+.venv/
+env/
+venv/
+ENV/
+
+# Arquivos compilados do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Configurações de ambiente
+.env
+.env.*
+
+# Ferramentas de Build e Distribuição
+dist/
+build/
+*.egg-info/
+
+# Testes e Cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDEs e Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ferramentas de tipagem e linting
+.mypy_cache/
+.ruff_cache/

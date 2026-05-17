@@ -1,0 +1,28 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+textual = "*"
+openai = "*"
+anthropic = "*"
+httpx = "*"
+cryptography = "*"
+click = "*"
+python-dotenv = "*"
+beautifulsoup4 = "*"
+duckduckgo-search = "*"
+
+[dev-packages]
+pytest = "*"
+pytest-cov = "*"
+ruff = "*"
+black = "*"
+mypy = "*"
+build = "*"
+twine = "*"
+pytest-asyncio = "*"
+
+[requires]
+python_version = "3.13"

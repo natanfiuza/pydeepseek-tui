@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pydeepseek-tui"
+version = "0.1.0"
+description = "Interface TUI rica no terminal para interagir com IA via DeepSeek/OpenAI"
+authors = [{name = "Nataniel Fiuza", email = "contato@natanfiuza.dev.br"}]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "textual",
+    "openai",
+    "anthropic",
+    "httpx",
+    "cryptography",
+    "click",
+    "python-dotenv",
+    "beautifulsoup4",
+    "duckduckgo-search",
+]
+
+[project.scripts]
+pydeepseek = "pydeepseek_tui.cli:main"
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.black]
+line-length = 88
+target-version = ['py313']
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=src --cov-report=term-missing"
