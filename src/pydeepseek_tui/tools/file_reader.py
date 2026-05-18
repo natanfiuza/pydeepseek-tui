@@ -26,10 +26,10 @@ class FileReaderTool(BaseTool):
             "properties": {
                 "file_path": {
                     "type": "string",
-                    "description": "O caminho absoluto ou relativo para o ficheiro que deve ser lido."
+                    "description": "O caminho absoluto ou relativo para o ficheiro que deve ser lido.",
                 }
             },
-            "required": ["file_path"]
+            "required": ["file_path"],
         }
 
     async def execute(self, **kwargs: Any) -> str:

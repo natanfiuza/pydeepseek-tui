@@ -2,7 +2,7 @@ import os
 from typing import AsyncGenerator, List, Dict, Any
 from openai import AsyncOpenAI
 
-from pydeepseek_tui.providers.base import BaseAIProvider
+from pydeepseek_tui.providers.base import BaseAIProvider, UsageInfo
 
 
 class OpenAIProvider(BaseAIProvider):
@@ -18,6 +18,7 @@ class OpenAIProvider(BaseAIProvider):
         model = os.environ.get("OPENAI_MODEL", "gpt-4o")
         self.client = AsyncOpenAI(api_key=api_key)
         self.model = model
+        self.last_usage: UsageInfo | None = None
 
     async def ask(
         self,
@@ -48,9 +49,21 @@ class OpenAIProvider(BaseAIProvider):
         if tools:
             kwargs["tools"] = tools
 
+        self.last_usage = None
         stream_response = await self.client.chat.completions.create(**kwargs)
 
         async for chunk in stream_response:
+            if hasattr(chunk, "usage") and chunk.usage is not None:
+                reasoning = 0
+                details = getattr(chunk.usage, "completion_tokens_details", None)
+                if details is not None:
+                    reasoning = getattr(details, "reasoning_tokens", 0) or 0
+                self.last_usage = UsageInfo(
+                    prompt_tokens=chunk.usage.prompt_tokens or 0,
+                    completion_tokens=chunk.usage.completion_tokens or 0,
+                    total_tokens=chunk.usage.total_tokens or 0,
+                    reasoning_tokens=reasoning,
+                )
             yield chunk.choices[0].delta
 
     async def close(self) -> None:

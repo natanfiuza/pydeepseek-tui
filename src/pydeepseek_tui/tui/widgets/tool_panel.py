@@ -6,6 +6,4 @@ class ToolPanel(Static):
 
     def show_tool(self, name: str, result: str) -> None:
         preview = result[:200] + "..." if len(result) > 200 else result
-        self.update(
-            f"[bold yellow]Tool: {name}[/bold yellow]\n{preview}"
-        )
+        self.update(f"[bold yellow]Tool: {name}[/bold yellow]\n{preview}")

@@ -2,7 +2,7 @@ import os
 from typing import AsyncGenerator, List, Dict, Any
 from anthropic import AsyncAnthropic
 
-from pydeepseek_tui.providers.base import BaseAIProvider
+from pydeepseek_tui.providers.base import BaseAIProvider, UsageInfo
 
 
 class AnthropicDelta:
@@ -46,6 +46,7 @@ class AnthropicProvider(BaseAIProvider):
         model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
         self.client = AsyncAnthropic(api_key=api_key)
         self.model = model
+        self.last_usage: UsageInfo | None = None
 
     def _messages_to_anthropic(
         self, messages: List[Dict[str, Any]]
@@ -63,28 +64,32 @@ class AnthropicProvider(BaseAIProvider):
                 continue
 
             if role == "tool":
-                converted.append({
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": msg.get("tool_call_id", ""),
-                            "content": content or "",
-                        }
-                    ],
-                })
+                converted.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": msg.get("tool_call_id", ""),
+                                "content": content or "",
+                            }
+                        ],
+                    }
+                )
                 continue
 
             if role == "assistant" and msg.get("tool_calls"):
                 tool_blocks = []
                 for tc in msg["tool_calls"]:
                     fn = tc.get("function", {})
-                    tool_blocks.append({
-                        "type": "tool_use",
-                        "id": tc["id"],
-                        "name": fn.get("name", ""),
-                        "input": _parse_json_args(fn.get("arguments", "{}")),
-                    })
+                    tool_blocks.append(
+                        {
+                            "type": "tool_use",
+                            "id": tc["id"],
+                            "name": fn.get("name", ""),
+                            "input": _parse_json_args(fn.get("arguments", "{}")),
+                        }
+                    )
                 converted.append({"role": "assistant", "content": tool_blocks})
                 continue
 
@@ -101,11 +106,15 @@ class AnthropicProvider(BaseAIProvider):
         converted = []
         for t in tools:
             fn = t.get("function", {})
-            converted.append({
-                "name": fn.get("name", ""),
-                "description": fn.get("description", ""),
-                "input_schema": fn.get("parameters", {"type": "object", "properties": {}}),
-            })
+            converted.append(
+                {
+                    "name": fn.get("name", ""),
+                    "description": fn.get("description", ""),
+                    "input_schema": fn.get(
+                        "parameters", {"type": "object", "properties": {}}
+                    ),
+                }
+            )
         return converted
 
     async def ask(
@@ -148,6 +157,7 @@ class AnthropicProvider(BaseAIProvider):
         if anthropic_tools:
             kwargs["tools"] = anthropic_tools
 
+        self.last_usage = None
         async with self.client.messages.stream(**kwargs) as stream:
             async for event in stream:
                 if event.type == "content_block_delta":
@@ -174,12 +184,26 @@ class AnthropicProvider(BaseAIProvider):
                 elif event.type == "message_stop":
                     break
 
+        try:
+            final = await stream.get_final_message()
+            if hasattr(final, "usage") and final.usage is not None:
+                self.last_usage = UsageInfo(
+                    prompt_tokens=final.usage.input_tokens or 0,
+                    completion_tokens=final.usage.output_tokens or 0,
+                    total_tokens=(final.usage.input_tokens or 0)
+                    + (final.usage.output_tokens or 0),
+                    reasoning_tokens=0,
+                )
+        except Exception:
+            self.last_usage = None
+
     async def close(self) -> None:
         await self.client.close()
 
 
 def _parse_json_args(args: str) -> Dict[str, Any]:
     import json
+
     try:
         return json.loads(args)
     except (json.JSONDecodeError, TypeError):

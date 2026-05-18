@@ -18,5 +18,6 @@ class TestCrypto:
 
     def test_decrypt_invalid_raises(self):
         import pytest
+
         with pytest.raises(Exception):
             decrypt_key("dado-invalido-nao-encriptado")

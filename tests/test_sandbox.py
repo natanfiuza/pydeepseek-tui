@@ -9,7 +9,11 @@ class TestIsPathAllowed:
         assert is_path_allowed(str(f), allowed_dirs=[str(tmp_path)])
 
     def test_path_outside_cwd(self, tmp_path):
-        outside = "/etc/passwd" if os.name != "nt" else "C:\\Windows\\System32\\drivers\\etc\\hosts"
+        outside = (
+            "/etc/passwd"
+            if os.name != "nt"
+            else "C:\\Windows\\System32\\drivers\\etc\\hosts"
+        )
         assert not is_path_allowed(outside, allowed_dirs=[str(tmp_path)])
 
     def test_path_traversal_blocked(self, tmp_path):

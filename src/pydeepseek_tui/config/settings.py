@@ -16,6 +16,7 @@ def _to_bool(value: str | None) -> bool:
 @dataclass
 class Settings:
     """Armazena as configuracoes globais da aplicacao."""
+
     ia_provider: str = "deepseek"
     language: str = "pt_BR"
     app_debug: bool = False
@@ -39,8 +40,12 @@ def load_settings() -> Settings:
 
     provider = env_vars.get("IA_PROVIDER") or os.environ.get("IA_PROVIDER", "deepseek")
     language = env_vars.get("LANGUAGE") or os.environ.get("LANGUAGE", "pt_BR")
-    model = env_vars.get("DEEPSEEK_MODEL") or os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-pro")
-    base_url = env_vars.get("DEEPSEEK_BASE_URL") or os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+    model = env_vars.get("DEEPSEEK_MODEL") or os.environ.get(
+        "DEEPSEEK_MODEL", "deepseek-v4-pro"
+    )
+    base_url = env_vars.get("DEEPSEEK_BASE_URL") or os.environ.get(
+        "DEEPSEEK_BASE_URL", "https://api.deepseek.com"
+    )
     ds_api_key = os.environ.get("DEEPSEEK_API_KEY")
     oai_api_key = os.environ.get("OPENAI_API_KEY")
     ant_api_key = os.environ.get("ANTHROPIC_API_KEY")
@@ -53,9 +58,11 @@ def load_settings() -> Settings:
         deepseek_model=model,
         deepseek_base_url=base_url,
         openai_api_key=oai_api_key,
-        openai_model=env_vars.get("OPENAI_MODEL") or os.environ.get("OPENAI_MODEL", "gpt-4o"),
+        openai_model=env_vars.get("OPENAI_MODEL")
+        or os.environ.get("OPENAI_MODEL", "gpt-4o"),
         anthropic_api_key=ant_api_key,
-        anthropic_model=env_vars.get("ANTHROPIC_MODEL") or os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6"),
+        anthropic_model=env_vars.get("ANTHROPIC_MODEL")
+        or os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6"),
     )
 
 

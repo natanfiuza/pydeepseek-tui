@@ -21,5 +21,11 @@
     "agent.blocked.plan": "Bloqueado pelo modo 'plan': a ferramenta '{tool}' e destrutiva. O modo plan permite apenas ferramentas de leitura.",
     "agent.blocked.agent": "Bloqueado pelo modo 'agent': a ferramenta '{tool}' e destrutiva. Confirma que desejas executar esta acao.",
     "error.security.outside_dir": "Erro de seguranca: O caminho esta fora do diretorio de trabalho.",
-    "error.file.exists": "O ficheiro '{path}' ja existe. Para sobrescreve-lo, chama novamente a ferramenta com overwrite=true."
+    "error.file.exists": "O ficheiro '{path}' ja existe. Para sobrescreve-lo, chama novamente a ferramenta com overwrite=true.",
+    "session.label": "Sessao: {time}",
+    "session.tokens": "Tokens: {tokens}",
+    "session.cost": "Custo: ${cost}",
+    "session.interactions": "Interacoes: {count}",
+    "session.saved": "Sessao salva com sucesso.",
+    "session.no_interactions": "Nenhuma interacao ainda."
 }

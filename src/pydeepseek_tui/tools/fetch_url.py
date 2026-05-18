@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from typing import Any, Dict
 from pydeepseek_tui.tools.base import BaseTool
 
+
 class FetchUrlTool(BaseTool):
     """
     Ferramenta para fazer download e extrair texto limpo de paginas web.
@@ -28,10 +29,10 @@ class FetchUrlTool(BaseTool):
             "properties": {
                 "url": {
                     "type": "string",
-                    "description": "A URL completa (http/https) da pagina a ser lida."
+                    "description": "A URL completa (http/https) da pagina a ser lida.",
                 }
             },
-            "required": ["url"]
+            "required": ["url"],
         }
 
     async def _fetch(self, url: str) -> str:
@@ -66,7 +67,9 @@ class FetchUrlTool(BaseTool):
         try:
             soup = BeautifulSoup(html, "html.parser")
 
-            for element in soup(["script", "style", "header", "footer", "nav", "aside"]):
+            for element in soup(
+                ["script", "style", "header", "footer", "nav", "aside"]
+            ):
                 element.extract()
 
             text = soup.get_text(separator="\n")

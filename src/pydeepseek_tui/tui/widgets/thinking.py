@@ -5,4 +5,5 @@ from textual.widgets import Static
 
 class ThinkingPanel(Static):
     """Painel colapsavel para chain-of-thought (placeholder)."""
+
     pass

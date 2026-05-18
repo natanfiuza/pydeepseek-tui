@@ -1,5 +1,4 @@
 import pytest
-from typing import AsyncGenerator, List, Dict, Any
 from pydeepseek_tui.agent import Agent, AgentMode
 from pydeepseek_tui.providers.base import BaseAIProvider
 from pydeepseek_tui.tools.registry import ToolRegistry
@@ -62,8 +61,7 @@ class ModeMockProvider(BaseAIProvider):
             yield MockDelta(
                 tool_calls=[
                     MockToolCall(
-                        index=0, id="c1", name="rm_files",
-                        arguments='{"path": "/tmp"}'
+                        index=0, id="c1", name="rm_files", arguments='{"path": "/tmp"}'
                     )
                 ]
             )

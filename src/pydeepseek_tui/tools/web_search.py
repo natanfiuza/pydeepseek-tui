@@ -2,6 +2,7 @@ from typing import Any, Dict
 from duckduckgo_search import DDGS
 from pydeepseek_tui.tools.base import BaseTool
 
+
 class WebSearchTool(BaseTool):
     """
     Ferramenta para pesquisar informações atualizadas na internet.
@@ -26,14 +27,14 @@ class WebSearchTool(BaseTool):
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Os termos de pesquisa a serem procurados na web."
+                    "description": "Os termos de pesquisa a serem procurados na web.",
                 },
                 "max_results": {
                     "type": "integer",
-                    "description": "O número máximo de resultados a devolver (o padrão é 5)."
-                }
+                    "description": "O número máximo de resultados a devolver (o padrão é 5).",
+                },
             },
-            "required": ["query"]
+            "required": ["query"],
         }
 
     async def execute(self, **kwargs: Any) -> str:
@@ -47,7 +48,7 @@ class WebSearchTool(BaseTool):
         try:
             with DDGS() as ddgs:
                 results = list(ddgs.text(query, max_results=max_results))
-            
+
             if not results:
                 return "Nenhum resultado encontrado para a tua pesquisa."
 

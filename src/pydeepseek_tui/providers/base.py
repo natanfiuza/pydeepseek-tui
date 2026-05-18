@@ -1,5 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator, List, Dict, Any
+from typing import AsyncGenerator, List, Dict, Any, NamedTuple
+
+
+class UsageInfo(NamedTuple):
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    reasoning_tokens: int = 0
+
 
 class BaseAIProvider(ABC):
     """
@@ -8,14 +16,18 @@ class BaseAIProvider(ABC):
     """
 
     @abstractmethod
-    async def ask(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]] | None = None) -> Any:
+    async def ask(
+        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]] | None = None
+    ) -> Any:
         """
         Processa a requisição com o histórico completo e ferramentas.
         """
         pass
 
     @abstractmethod
-    async def stream(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]] | None = None) -> AsyncGenerator[Any, None]:
+    async def stream(
+        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]] | None = None
+    ) -> AsyncGenerator[Any, None]:
         """
         Processa a requisicao em streaming com o historico e ferramentas.
         """

@@ -3,7 +3,7 @@ import json
 import shutil
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict
 from pydeepseek_tui.config.settings import CONFIG_DIR
 
 WORKSPACE_DIR = CONFIG_DIR / "workspace"

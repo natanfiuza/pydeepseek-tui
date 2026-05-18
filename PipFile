@@ -20,9 +20,9 @@ pytest-cov = "*"
 ruff = "*"
 black = "*"
 mypy = "*"
+pytest-asyncio = "*"
 build = "*"
 twine = "*"
-pytest-asyncio = "*"
 
 [requires]
 python_version = "3.13"

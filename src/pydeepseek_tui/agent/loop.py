@@ -1,10 +1,11 @@
 import json
 from enum import Enum
 from typing import AsyncGenerator, Callable, Awaitable, List, Dict, Any
+from pydeepseek_tui.agent.activity import SessionActivityLogger
 from pydeepseek_tui.config.debug_logger import DebugLogger
 from pydeepseek_tui.providers.base import BaseAIProvider
+from pydeepseek_tui.providers.pricing import calculate_cost
 from pydeepseek_tui.tools.registry import ToolRegistry
-from pydeepseek_tui.tools.base import BaseTool
 
 MAX_HISTORY_MESSAGES = 50
 
@@ -54,9 +55,15 @@ class Agent:
             return False
         system_msg = self.conversation_history[0]
         overflow = len(self.conversation_history) - MAX_HISTORY_MESSAGES + 1
-        self.conversation_history = [
-            system_msg
-        ] + self.conversation_history[overflow + 1:]
+        self.conversation_history = [system_msg] + self.conversation_history[
+            overflow + 1 :
+        ]
+        # Remove orphan tool messages (assistant with tool_calls was trimmed)
+        while (
+            len(self.conversation_history) > 1
+            and self.conversation_history[1].get("role") == "tool"
+        ):
+            self.conversation_history.pop(1)
         return True
 
     def _is_destructive(self, tool_name: str) -> bool:
@@ -84,30 +91,27 @@ class Agent:
 
     async def chat_stream(self, prompt: str) -> AsyncGenerator[str, None]:
         debug = DebugLogger.get_instance()
+        activity = SessionActivityLogger.get_instance()
         if debug:
             debug.log_user_input(prompt)
 
         self.conversation_history.append({"role": "user", "content": prompt})
-        tools_schema = self.registry.get_api_schema()
 
         while True:
             tool_calls_buffer: Dict[int, Dict[str, Any]] = {}
-
-            if debug:
-                debug.log_prompt(
-                    self.conversation_history,
-                    tools_schema if tools_schema else None,
-                )
+            tools_schema = self.registry.get_api_schema()
+            response_text = ""
+            reasoning_text = ""
 
             async for chunk in self.provider.stream(
                 self.conversation_history, tools=tools_schema
             ):
                 if chunk.content:
+                    response_text += chunk.content
                     yield chunk.content
 
                 if hasattr(chunk, "reasoning_content") and chunk.reasoning_content:
-                    if debug:
-                        debug.log_reasoning(chunk.reasoning_content)
+                    reasoning_text += chunk.reasoning_content
 
                 if chunk.tool_calls:
                     for tc in chunk.tool_calls:
@@ -121,7 +125,46 @@ class Agent:
                         if tc.function.arguments:
                             tool_calls_buffer[idx]["arguments"] += tc.function.arguments
 
+            # Build descriptive previews
+            if tool_calls_buffer:
+                tool_names = sorted(set(c["name"] for c in tool_calls_buffer.values()))
+                prompt_preview = ", ".join(tool_names)
+                resp_preview = response_text if response_text else prompt_preview
+            else:
+                prompt_preview = prompt
+                resp_preview = response_text
+
+            # Log interaction after stream completes
+            usage = getattr(self.provider, "last_usage", None)
+            if usage is not None:
+                provider_name = self.provider.__class__.__name__.replace(
+                    "Provider", ""
+                ).lower()
+                model_name = getattr(self.provider, "model", "")
+                cost = calculate_cost(
+                    provider_name,
+                    model_name,
+                    usage.prompt_tokens,
+                    usage.completion_tokens,
+                )
+                activity.log_interaction(
+                    prompt_tokens=usage.prompt_tokens,
+                    completion_tokens=usage.completion_tokens,
+                    reasoning_tokens=usage.reasoning_tokens,
+                    cost_usd=cost,
+                    provider=provider_name,
+                    model=model_name,
+                    prompt_preview=prompt_preview,
+                    response_preview=resp_preview,
+                )
+                if reasoning_text and debug:
+                    debug.log_output(f"[reasoning] {reasoning_text[:1000]}")
+
             if not tool_calls_buffer:
+                assistant_msg = {"role": "assistant", "content": response_text}
+                if reasoning_text:
+                    assistant_msg["reasoning_content"] = reasoning_text
+                self.conversation_history.append(assistant_msg)
                 break
 
             formatted_calls = [
@@ -135,11 +178,14 @@ class Agent:
                 }
                 for call in tool_calls_buffer.values()
             ]
-            self.conversation_history.append({
+            assistant_msg: Dict[str, Any] = {
                 "role": "assistant",
                 "content": None,
                 "tool_calls": formatted_calls,
-            })
+            }
+            if reasoning_text:
+                assistant_msg["reasoning_content"] = reasoning_text
+            self.conversation_history.append(assistant_msg)
 
             for call in tool_calls_buffer.values():
                 tool_name = call["name"]
@@ -155,21 +201,16 @@ class Agent:
                         f"a ferramenta '{tool_name}' e destrutiva."
                     )
                     if self.mode == AgentMode.PLAN:
-                        result += (
-                            " O modo plan permite apenas ferramentas de leitura."
-                        )
+                        result += " O modo plan permite apenas ferramentas de leitura."
                     elif self.mode == AgentMode.AGENT:
-                        result += (
-                            " Confirma que desejas executar esta acao."
-                        )
+                        result += " Confirma que desejas executar esta ação."
                     yield (
                         f"\n\n[bold yellow]Bloqueado {tool_name}:[/bold yellow] "
                         f"{result}\n"
                     )
                 else:
                     yield (
-                        f"\n\n[bold yellow]A executar {tool_name}..."
-                        "[/bold yellow]\n"
+                        f"\n\n[bold yellow]A executar {tool_name}..." "[/bold yellow]\n"
                     )
 
                     try:
@@ -180,14 +221,15 @@ class Agent:
 
                 if debug:
                     debug.log_tool_call(tool_name, json.dumps(args), result)
-                    debug.log_tool_result(tool_name, result)
 
-                self.conversation_history.append({
-                    "role": "tool",
-                    "tool_call_id": call["id"],
-                    "name": tool_name,
-                    "content": result,
-                })
+                self.conversation_history.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call["id"],
+                        "name": tool_name,
+                        "content": result,
+                    }
+                )
 
             if self._trim_history() and not self._history_was_trimmed:
                 self._history_was_trimmed = True
