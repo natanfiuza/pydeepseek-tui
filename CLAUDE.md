@@ -48,12 +48,23 @@ Todos implementam `BaseAIProvider` (abstrato: `ask()`, `stream()`, `close()`). C
 
 `agent/loop.py` — `Agent.chat_stream()`:
 1. Envia `conversation_history` + `tools_schema` ao provider via stream
-2. Se o provider devolve texto → yield para a TUI
+2. Acumula `response_text` e `reasoning_text` dos chunks
 3. Se devolve `tool_calls` → acumula fragmentos (streaming parcial)
-4. Verifica `is_destructive` contra o `AgentMode` antes de executar
-5. Adiciona tool results ao histórico e recomeça o loop
-6. Quando não há mais tool calls → `break`
-7. Se `MAX_HISTORY_MESSAGES` (50) for excedido → sliding window preservando system message
+4. No fim do stream: lê `provider.last_usage` → `activity.log_interaction()` com tokens/custo/previews
+5. Previews descritivos: rounds com tool calls usam nomes das tools (`"list_dir, read_file"`); rounds sem tool calls usam o prompt original
+6. Verifica `is_destructive` contra o `AgentMode` antes de executar
+7. Se bloqueado → yield mensagem de bloqueio; tool result = mensagem de bloqueio
+8. Se aprovado → executa a tool, yield resultado, adiciona ao histórico
+9. Adiciona `reasoning_content` à mensagem assistant no histórico (DeepSeek exige eco)
+10. Quando não há tool calls → adiciona resposta textual ao histórico e `break`
+11. `_trim_history()`: sliding window preservando system message + remove tool messages órfãs
+
+### Modal de confirmação
+
+`tui/widgets/confirm_screen.py` — `ConfirmScreen(ModalScreen)`:
+- Exibido quando uma ferramenta destrutiva precisa de confirmação (modo Agent)
+- 3 botões: Sim (True), Sim para Todos (muda para YOLO), Não (False)
+- `_tui_confirm()` em `app.py` usa `push_screen` + `asyncio.Future` para aguardar resposta
 
 ### Modos de operação
 
@@ -79,25 +90,48 @@ O projeto usa **Textual 8.2.6**. Nesta versão, `RichLog.write()` NÃO tem parâ
 - `write_stream()` usa `_safe_markup()`: deteta tags `[bold]` com regex e aplica `Text.from_markup()` se necessário; caso contrário escreve como `Text` puro
 - NUNCA usar strings com `[bold green]` markup inline — não funciona no Textual 8.x
 
-`tui/app.py` — Acumula chunks do `chat_stream()` e escreve tudo de uma vez com `log.write_stream(full_response)`. Isto evita que cada chunk vire uma linha separada.
+`tui/app.py` — Acumula chunks do `chat_stream()` e escreve tudo de uma vez com `log.write_stream(full_response)`. Isto evita que cada chunk vire uma linha separada. No arranque inicializa `SessionActivityLogger` e `DebugLogger.init(session_id)`. Ao sair (`q`) guarda a sessão via `action_save_and_quit()`.
+
+`tui/widgets/session_info.py` — `SessionInfo(Static)` exibe no topo direito: tempo de sessão, total de tokens, custo USD. Atualizado a cada 5s via `set_interval`.
 
 ### APP_DEBUG
 
-Variável booleana no `.env` (`APP_DEBUG=true`). Quando ativa, cria `~/.deepseek-tui/sessions/debug_YYYYMMDD_HHMMSS/` com:
-- `session.log` — input, output, erros, tool calls (formato `[TIMESTAMP] [LEVEL] mensagem`)
-- `prompts.json` — array JSON com prompts enviados, `reasoning_content`, tool results
+Variável booleana no `.env` (`APP_DEBUG=true`). Quando ativa, cria `debug.log` dentro da pasta da sessão (`~/.deepseek-tui/sessions/<uuid>/debug.log`) com:
+- Input do utilizador, output dos chunks, erros, tool calls (formato `[TIMESTAMP] [LEVEL] mensagem`)
+- Já NÃO regista prompts completos — apenas erros e mensagens exibidas
 
-Singleton `DebugLogger` em `config/debug_logger.py`. Acedido via `DebugLogger.get_instance()` que retorna `None` quando `app_debug=False`.
+Singleton `DebugLogger` em `config/debug_logger.py`. Inicializado via `DebugLogger.init(session_id)` no arranque da app. `DebugLogger.get_instance()` retorna `None` quando `app_debug=False`.
 
 ### Internacionalização
 
 `i18n/translator.py` — Singleton `Translator` com JSON locales em `i18n/locales/{pt_BR,en_US}.json`. Fallback: locale → en_US → key literal. Suporte a `{var}` substitution.
 
-### Sessões e Workspace
+### Sessões, Activity Logger e Workspace
 
-`agent/session.py` — `save_session()`, `load_session()`, `list_sessions()`, `delete_session()`. Ficheiros JSON em `~/.deepseek-tui/sessions/`.
+**Estrutura de pastas** em `~/.deepseek-tui/sessions/`:
 
-`agent/workspace.py` — `Workspace` com `snapshot()` (SHA-256), `undo()`, `undo_all()`. Snapshots em `~/.deepseek-tui/workspace/{session_id}/`.
+```
+~/.deepseek-tui/sessions/
+    manifest.json              # array JSON com todas as sessões (append)
+    <uuid>/
+        interactions.json      # sempre ativo: array de interações com tokens/custo
+        session.json           # criado ao salvar/sair: histórico completo da conversa
+        debug.log              # apenas quando APP_DEBUG=true
+```
+
+**`agent/activity.py`** — `SessionActivityLogger` (singleton sempre ativo):
+- `log_interaction()` — regista cada chamada à API com tokens (prompt/completion/reasoning), custo USD, previews
+- `update_metadata()` / `set_saved()` — atualizam o `manifest.json` (array, procura por session_id)
+- `get_stats()` — devolve `{elapsed_seconds, total_tokens, total_cost, interaction_count}` para a UI
+- Variável global `current_session_id: str | None` definida no módulo para identificar a sessão ativa
+
+**`providers/pricing.py`** — Tabela de preços por provider/modelo + `calculate_cost()`.
+
+**Token usage**: Os providers capturam `last_usage` (normalizado para `UsageInfo` NamedTuple) durante o stream. O agent loop lê `provider.last_usage` após cada stream e chama `activity.log_interaction()`.
+
+**`agent/session.py`** — `save_session()`, `load_session()`, `list_sessions()`, `delete_session()`. Sessões guardadas em pastas UUID (`sessions/<uuid>/session.json`), com backward compat para ficheiros legacy flat `.json`.
+
+**`agent/workspace.py`** — `Workspace` com `snapshot()` (SHA-256), `undo()`, `undo_all()`. Snapshots em `~/.deepseek-tui/workspace/{session_id}/`.
 
 ### Mock pattern nos testes
 
@@ -110,8 +144,8 @@ Singleton `DebugLogger` em `config/debug_logger.py`. Acedido via `DebugLogger.ge
 
 ## Regras
 
-- Ao finalizar qualquer tarefa, gera um relatório detalhado em `docs/claude-code/reports/`
 - NUNCA usar strings com markup `[bold]` no Textual — usar `rich.text.Text` com `Style()` explícito
 - Não adicionar `markup=True/False` a chamadas `RichLog.write()` — Textual 8.x não suporta
 - Schemas de tools: nunca incluir `"required": []` vazio nem `"default"` nos parâmetros
 - Providers leem `os.environ` diretamente, não o objeto `settings`
+- Ao finalizar qualquer tarefa, voce deve gerar um relatório detalhado em `docs/claude-code/reports/{branch}`, onde {branch} recebe a branch ativa.

@@ -1,5 +1,3 @@
-import json
-from pathlib import Path
 from pydeepseek_tui.i18n.translator import Translator, LOCALES_DIR
 
 

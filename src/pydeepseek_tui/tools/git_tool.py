@@ -98,7 +98,9 @@ class GitTool(BaseTool):
             if action == "status":
                 code, out, err = await self._run_git("status", "--short", cwd=path_str)
                 if code == 0:
-                    return f"Git status em '{path_str}':\n{out or '(working tree limpo)'}"
+                    return (
+                        f"Git status em '{path_str}':\n{out or '(working tree limpo)'}"
+                    )
                 return f"Erro git status:\n{err}"
 
             if action == "diff":
@@ -137,9 +139,7 @@ class GitTool(BaseTool):
                 files = kwargs.get("files", [])
                 if not files:
                     return "Erro: Especifica pelo menos um ficheiro para 'add'."
-                code, out, err = await self._run_git(
-                    "add", *files, cwd=path_str
-                )
+                code, out, err = await self._run_git("add", *files, cwd=path_str)
                 if code == 0:
                     return f"Git add: {', '.join(files)} adicionados."
                 return f"Erro git add:\n{err}"

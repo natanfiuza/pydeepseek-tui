@@ -32,7 +32,11 @@ class AnotherTool(BaseTool):
 
     @property
     def parameters(self) -> Dict[str, Any]:
-        return {"type": "object", "properties": {"x": {"type": "string"}}, "required": ["x"]}
+        return {
+            "type": "object",
+            "properties": {"x": {"type": "string"}},
+            "required": ["x"],
+        }
 
     async def execute(self, **kwargs: Any) -> str:
         return kwargs.get("x", "")

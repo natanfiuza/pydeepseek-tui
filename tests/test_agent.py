@@ -83,7 +83,9 @@ class MockProviderWithToolCallStreaming(BaseAIProvider):
         if self._call_count == 1:
             yield MockDelta(
                 tool_calls=[
-                    MockToolCall(index=0, id="call_abc", name="fake_tool", arguments=""),
+                    MockToolCall(
+                        index=0, id="call_abc", name="fake_tool", arguments=""
+                    ),
                 ]
             )
             yield MockDelta(
@@ -148,9 +150,7 @@ async def test_agent_chat_stream_and_history(mock_agent):
     assert full_response == "Ola, sou um teste seguro e rapido!"
 
     last_user = next(
-        m
-        for m in reversed(mock_agent.conversation_history)
-        if m["role"] == "user"
+        m for m in reversed(mock_agent.conversation_history) if m["role"] == "user"
     )
     assert last_user["content"] == prompt
 
@@ -198,14 +198,18 @@ def test_trim_history_preserves_system_message(mock_agent):
     from pydeepseek_tui.agent import MAX_HISTORY_MESSAGES
 
     for i in range(MAX_HISTORY_MESSAGES + 10):
-        mock_agent.conversation_history.append({
-            "role": "user",
-            "content": f"teste {i}",
-        })
-        mock_agent.conversation_history.append({
-            "role": "assistant",
-            "content": f"resposta {i}",
-        })
+        mock_agent.conversation_history.append(
+            {
+                "role": "user",
+                "content": f"teste {i}",
+            }
+        )
+        mock_agent.conversation_history.append(
+            {
+                "role": "assistant",
+                "content": f"resposta {i}",
+            }
+        )
 
     assert len(mock_agent.conversation_history) > MAX_HISTORY_MESSAGES
 

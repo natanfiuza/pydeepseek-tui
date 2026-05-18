@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pydeepseek-tui"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Interface TUI rica no terminal para interagir com IA via DeepSeek/OpenAI"
 authors = [{name = "Nataniel Fiuza", email = "contato@natanfiuza.dev.br"}]
 readme = "README.md"
@@ -40,3 +40,6 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=src --cov-report=term-missing"
+
+[tool.setuptools.dynamic]
+version = {attr = "pydeepseek_tui.__version__"}

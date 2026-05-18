@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
+
 class BaseTool(ABC):
     """
     Interface base para todas as ferramentas (tools) do agente.
@@ -31,10 +32,10 @@ class BaseTool(ABC):
     async def execute(self, **kwargs: Any) -> str:
         """
         Executa a ação da ferramenta com os argumentos fornecidos pela IA.
-        
+
         Args:
             **kwargs: Parâmetros dinâmicos definidos no schema.
-            
+
         Returns:
             str: O resultado da execução no formato de texto para retornar ao modelo.
         """

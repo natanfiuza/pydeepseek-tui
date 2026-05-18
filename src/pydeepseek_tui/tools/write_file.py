@@ -26,11 +26,11 @@ class WriteFileTool(BaseTool):
             "properties": {
                 "file_path": {
                     "type": "string",
-                    "description": "O caminho (absoluto ou relativo) onde o ficheiro sera guardado."
+                    "description": "O caminho (absoluto ou relativo) onde o ficheiro sera guardado.",
                 },
                 "content": {
                     "type": "string",
-                    "description": "O conteudo de texto a ser escrito no ficheiro."
+                    "description": "O conteudo de texto a ser escrito no ficheiro.",
                 },
                 "overwrite": {
                     "type": "boolean",
@@ -38,7 +38,7 @@ class WriteFileTool(BaseTool):
                     "default": False,
                 },
             },
-            "required": ["file_path", "content"]
+            "required": ["file_path", "content"],
         }
 
     async def execute(self, **kwargs: Any) -> str:

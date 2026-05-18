@@ -1,0 +1,44 @@
+# 🚀 Sugestão de Pull Request
+
+**Commit Message Recomendada:**
+```text
+feat: adiciona rastreio de sessão, tokens/custo e modal de confirmação
+```
+
+---
+
+## 🎯 Resumo
+
+Implementa rastreamento completo de sessão com registro persistente de interações, contagem de tokens e custos em USD para cada chamada à API dos provedores (DeepSeek, OpenAI, Anthropic). Adiciona um modal interativo de confirmação para ferramentas destrutivas (modo Agent). Corrige bugs críticos no logging, histórico do agente e exibição de conteúdo no terminal.
+
+## 🛠️ Mudanças Técnicas
+
+- **Rastreio de sessão:**
+  - Novo singleton `SessionActivityLogger` gerencia pasta UUID e `interactions.json` (sempre ativo) e `manifest.json` (append, não sobrescrito).
+  - Tabela de preços em `providers/pricing.py` e cálculo de custo por provider/modelo.
+  - `UsageInfo` NamedTuple adicionado aos providers; capturam `last_usage` durante o stream.
+  - Loop do agente chama `log_interaction()`, gera previews descritivos (nome das tools) e acumula custo.
+  - Widget `SessionInfo` exibe tempo, tokens e custo no cabeçalho da TUI, atualizado a cada 5s.
+  - `save_session` e `list_sessions` adaptados para estrutura de pastas UUID com backward compat.
+  - `DebugLogger` refatorado para usar `session_id`, escreve `debug.log` na pasta da sessão.
+- **Modal de confirmação:**
+  - Novo `ConfirmScreen` (ModalScreen) com botões (S)im, (T)odos (YOLO) e (N)ão.
+  - `_tui_confirm` em `app.py` utiliza `push_screen` + `asyncio.Future` para interatividade.
+- **Correções:**
+  - `prompt_preview` repetitivo resolvido: usa nomes das tools em rounds de tool call.
+  - `response_preview` vazio tratado com fallback para nomes das tools.
+  - `_trim_history` agora remove mensagens `tool` órfãs para evitar erro 400 da API.
+  - Respostas textuais do modelo são adicionadas ao histórico como `assistant` com `reasoning_content`.
+  - Output para debug acumulado e gravado como resposta completa, não chunk a chunk.
+- **Infraestrutura:**
+  - `pyproject.toml` migra para versão dinâmica de `__init__.py` (v0.1.1).
+  - `README.md` reformulado com instruções de instalação via pip, dependências e guia de contribuição.
+  - Novos testes: `test_activity.py` (10), `test_pricing.py` (7), ampliação de `test_session.py` para pastas.
+  - Chaves i18n adicionadas para sessão (pt_BR e en_US).
+
+## ⚠️ Impacto/Avisos
+
+- **Estrutura de sessões alterada:** pastas `uuid/` dentro de `~/.deepseek-tui/sessions/`. O comando `pydeepseek sessions` foi atualizado e mantém compatibilidade com arquivos flat antigos.
+- **Manifest.json** agora é um array JSON incrementado; não usar mais o formato de objeto único.
+- **Dependência movida:** `pytest-asyncio` foi deslocada dentro do `Pipfile`, mas sem impacto funcional.
+- **Debug logging**: ao ativar `APP_DEBUG`, o arquivo `debug.log` é criado dentro da pasta da sessão, não mais em uma pasta separada `debug_...`.

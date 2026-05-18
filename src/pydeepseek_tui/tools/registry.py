@@ -9,6 +9,7 @@ from pydeepseek_tui.tools.list_dir import ListDirTool
 from pydeepseek_tui.tools.search_files import SearchFilesTool
 from pydeepseek_tui.tools.git_tool import GitTool
 
+
 class ToolRegistry:
     """
     Gerenciador centralizado de ferramentas do agente.
@@ -35,14 +36,16 @@ class ToolRegistry:
         for tool in self._tools.values():
             params = tool.parameters.copy()
             self._sanitize_params(params)
-            schemas.append({
-                "type": "function",
-                "function": {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": params,
-                },
-            })
+            schemas.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": params,
+                    },
+                }
+            )
         return schemas
 
     @staticmethod
@@ -51,7 +54,8 @@ class ToolRegistry:
             del params["required"]
         for prop in params.get("properties", {}).values():
             prop.pop("default", None)
-        
+
+
 def get_core_registry() -> ToolRegistry:
     """Inicializa o registro e cadastra todas as ferramentas padrao do sistema."""
     registry = ToolRegistry()
@@ -63,4 +67,4 @@ def get_core_registry() -> ToolRegistry:
     registry.register(ListDirTool())
     registry.register(SearchFilesTool())
     registry.register(GitTool())
-    return registry        
+    return registry

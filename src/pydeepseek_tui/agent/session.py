@@ -1,7 +1,7 @@
 import json
+import shutil
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
 from pydeepseek_tui.config.settings import CONFIG_DIR
@@ -34,12 +34,13 @@ def save_session(
     model: str = "",
     mode: str = "agent",
     metadata: Dict[str, str] | None = None,
+    session_id: str | None = None,
 ) -> str:
-    """Guarda uma sessao e devolve o ID."""
+    """Guarda uma sessao e devolve o ID. Usa pastas UUID."""
     SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
-    session_id = uuid.uuid4().hex[:12]
+    sid = session_id or str(uuid.uuid4())
     session = Session(
-        id=session_id,
+        id=sid,
         timestamp=datetime.now(timezone.utc).isoformat(),
         provider=provider,
         model=model,
@@ -47,18 +48,28 @@ def save_session(
         conversation_history=conversation_history,
         metadata=metadata or {},
     )
-    path = SESSIONS_DIR / f"{session_id}.json"
+    session_dir = SESSIONS_DIR / sid
+    session_dir.mkdir(parents=True, exist_ok=True)
+    path = session_dir / "session.json"
     path.write_text(
         json.dumps(session.__dict__, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    return session_id
+    return sid
 
 
 def load_session(session_id: str) -> Session | None:
-    """Carrega uma sessao pelo ID."""
-    path = SESSIONS_DIR / f"{session_id}.json"
+    """Carrega uma sessao pelo ID a partir da pasta."""
+    path = SESSIONS_DIR / session_id / "session.json"
     if not path.exists():
+        # Fallback: old flat file format
+        old_path = SESSIONS_DIR / f"{session_id}.json"
+        if old_path.exists():
+            try:
+                data = json.loads(old_path.read_text(encoding="utf-8"))
+                return Session(**data)
+            except (json.JSONDecodeError, TypeError):
+                return None
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -68,23 +79,36 @@ def load_session(session_id: str) -> Session | None:
 
 
 def list_sessions() -> List[Session]:
-    """Lista todas as sessoes salvas."""
+    """Lista todas as sessoes salvas (pastas e ficheiros legacy)."""
     if not SESSIONS_DIR.exists():
         return []
     sessions = []
-    for path in sorted(SESSIONS_DIR.glob("*.json"), reverse=True):
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            sessions.append(Session(**data))
-        except (json.JSONDecodeError, TypeError):
-            pass
+    for child in sorted(SESSIONS_DIR.iterdir(), reverse=True):
+        if child.is_dir():
+            session_file = child / "session.json"
+            if session_file.exists():
+                try:
+                    data = json.loads(session_file.read_text(encoding="utf-8"))
+                    sessions.append(Session(**data))
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        elif child.suffix == ".json" and child.name != "manifest.json":
+            try:
+                data = json.loads(child.read_text(encoding="utf-8"))
+                sessions.append(Session(**data))
+            except (json.JSONDecodeError, TypeError):
+                pass
     return sessions
 
 
 def delete_session(session_id: str) -> bool:
-    """Apaga uma sessao pelo ID."""
-    path = SESSIONS_DIR / f"{session_id}.json"
-    if not path.exists():
-        return False
-    path.unlink()
-    return True
+    """Apaga uma sessao pelo ID (pasta ou ficheiro legacy)."""
+    session_dir = SESSIONS_DIR / session_id
+    if session_dir.is_dir():
+        shutil.rmtree(str(session_dir))
+        return True
+    old_path = SESSIONS_DIR / f"{session_id}.json"
+    if old_path.exists():
+        old_path.unlink()
+        return True
+    return False

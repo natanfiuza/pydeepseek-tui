@@ -3,4 +3,5 @@
 
 class MainScreen:
     """Layout principal com sidebar + chat + statusbar."""
+
     pass
