@@ -19,6 +19,14 @@ class AgentMode(str, Enum):
 ConfirmCallback = Callable[[str, str], Awaitable[bool]]
 
 
+class ConfirmationNeeded:
+    """Sentinel yielded by chat_stream when a destructive tool needs confirmation."""
+
+    def __init__(self, tool_name: str, args: str) -> None:
+        self.tool_name = tool_name
+        self.args = args
+
+
 class Agent:
 
     def __init__(
@@ -72,7 +80,13 @@ class Agent:
             return getattr(tool, "is_destructive", False)
         except KeyError:
             return False
-
+    def _sanitize_history(self) -> None:
+        """Remove mensagens órfãs do assistente caso a execução anterior tenha sido abortada."""
+        if self.conversation_history:
+            last_msg = self.conversation_history[-1]
+            if last_msg.get("role") == "assistant" and last_msg.get("tool_calls"):
+                self.conversation_history.pop()
+                
     async def _check_confirmation(self, tool_name: str, args: Dict[str, Any]) -> bool:
         """Verifica se a ferramenta pode ser executada no modo atual."""
         if not self._is_destructive(tool_name):
@@ -89,7 +103,10 @@ class Agent:
         # YOLO: executa sem confirmar
         return True
 
-    async def chat_stream(self, prompt: str) -> AsyncGenerator[str, None]:
+    async def chat_stream(
+        self, prompt: str
+    ) -> AsyncGenerator["str | ConfirmationNeeded", bool]:
+        self._sanitize_history()
         debug = DebugLogger.get_instance()
         activity = SessionActivityLogger.get_instance()
         if debug:
@@ -195,7 +212,20 @@ class Agent:
                 except (json.JSONDecodeError, TypeError):
                     args = {}
 
-                if not await self._check_confirmation(tool_name, args):
+                if not self._is_destructive(tool_name):
+                    confirmed = True
+                elif self.mode == AgentMode.PLAN:
+                    confirmed = False
+                elif self.mode == AgentMode.AGENT and self.on_confirm:
+                    confirmed = yield ConfirmationNeeded(
+                        tool_name, json.dumps(args)
+                    )
+                elif self.mode == AgentMode.AGENT:
+                    confirmed = False
+                else:  # YOLO
+                    confirmed = True
+
+                if not confirmed:
                     result = (
                         f"Bloqueado pelo modo '{self.mode.value}': "
                         f"a ferramenta '{tool_name}' e destrutiva."

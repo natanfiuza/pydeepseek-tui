@@ -20,7 +20,8 @@
       "PowerShell(New-Item *)",
       "PowerShell(& \"C:\\\\Users\\\\nataniel\\\\.virtualenvs\\\\pydeepseek-tui-vp6QdzR_\\\\Scripts\\\\ruff.exe\" check C:\\\\Users\\\\nataniel\\\\projetos\\\\python\\\\pydeepseek-tui\\\\src\\\\pydeepseek_tui\\\\tui\\\\widgets\\\\confirm_screen.py C:\\\\Users\\\\nataniel\\\\projetos\\\\python\\\\pydeepseek-tui\\\\src\\\\pydeepseek_tui\\\\tui\\\\app.py 2>&1)",
       "PowerShell(& \"C:\\\\Users\\\\nataniel\\\\.virtualenvs\\\\pydeepseek-tui-vp6QdzR_\\\\Scripts\\\\black.exe\" C:\\\\Users\\\\nataniel\\\\projetos\\\\python\\\\pydeepseek-tui\\\\src\\\\pydeepseek_tui\\\\tui\\\\widgets\\\\confirm_screen.py C:\\\\Users\\\\nataniel\\\\projetos\\\\python\\\\pydeepseek-tui\\\\src\\\\pydeepseek_tui\\\\tui\\\\app.py 2>&1)",
-      "PowerShell(& \"C:\\\\Users\\\\nataniel\\\\.virtualenvs\\\\pydeepseek-tui-vp6QdzR_\\\\Scripts\\\\ruff.exe\" check C:\\\\Users\\\\nataniel\\\\projetos\\\\python\\\\pydeepseek-tui\\\\src\\\\pydeepseek_tui\\\\tui\\\\widgets\\\\confirm_screen.py 2>&1; & \"C:\\\\Users\\\\nataniel\\\\.virtualenvs\\\\pydeepseek-tui-vp6QdzR_\\\\Scripts\\\\black.exe\" C:\\\\Users\\\\nataniel\\\\projetos\\\\python\\\\pydeepseek-tui\\\\src\\\\pydeepseek_tui\\\\tui\\\\widgets\\\\confirm_screen.py 2>&1)"
+      "PowerShell(& \"C:\\\\Users\\\\nataniel\\\\.virtualenvs\\\\pydeepseek-tui-vp6QdzR_\\\\Scripts\\\\ruff.exe\" check C:\\\\Users\\\\nataniel\\\\projetos\\\\python\\\\pydeepseek-tui\\\\src\\\\pydeepseek_tui\\\\tui\\\\widgets\\\\confirm_screen.py 2>&1; & \"C:\\\\Users\\\\nataniel\\\\.virtualenvs\\\\pydeepseek-tui-vp6QdzR_\\\\Scripts\\\\black.exe\" C:\\\\Users\\\\nataniel\\\\projetos\\\\python\\\\pydeepseek-tui\\\\src\\\\pydeepseek_tui\\\\tui\\\\widgets\\\\confirm_screen.py 2>&1)",
+      "Bash(Select-Object -First 60)"
     ]
   }
 }

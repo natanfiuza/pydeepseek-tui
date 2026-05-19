@@ -109,6 +109,8 @@ async def test_agent_mode_blocks_without_confirm(mode_registry):
 
 @pytest.mark.asyncio
 async def test_agent_mode_allows_with_confirm(mode_registry):
+    from pydeepseek_tui.agent.loop import ConfirmationNeeded
+
     async def always_confirm(tool_name, args):
         return True
 
@@ -119,8 +121,17 @@ async def test_agent_mode_allows_with_confirm(mode_registry):
         on_confirm=always_confirm,
     )
     chunks = []
-    async for chunk in agent.chat_stream("remove /tmp"):
-        chunks.append(chunk)
+    ag = agent.chat_stream("remove /tmp")
+    try:
+        chunk = await ag.__anext__()
+        while True:
+            if isinstance(chunk, ConfirmationNeeded):
+                chunk = await ag.asend(True)
+            else:
+                chunks.append(chunk)
+                chunk = await ag.__anext__()
+    except StopAsyncIteration:
+        pass
 
     full = "".join(chunks)
     assert "A executar rm_files" in full

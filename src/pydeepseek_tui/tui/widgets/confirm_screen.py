@@ -1,5 +1,3 @@
-import asyncio
-
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -35,13 +33,10 @@ class ConfirmScreen(ModalScreen):
     }
     """
 
-    def __init__(
-        self, tool_name: str, args: str, future: asyncio.Future
-    ) -> None:
+    def __init__(self, tool_name: str, args: str) -> None:
         super().__init__()
         self.tool_name = tool_name
         self.args = args
-        self._future = future
 
     def compose(self) -> ComposeResult:
         with Vertical(id="dialog"):
@@ -56,23 +51,18 @@ class ConfirmScreen(ModalScreen):
                 yield Button("(N)ao", variant="error", id="btn-no")
 
     def action_yes(self) -> None:
-        self._finish(True)
+        self.dismiss(True)
 
     def action_all(self) -> None:
-        self._finish("all")
+        self.dismiss("all")
 
     def action_no(self) -> None:
-        self._finish(False)
+        self.dismiss(False)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-yes":
-            self._finish(True)
+            self.dismiss(True)
         elif event.button.id == "btn-all":
-            self._finish("all")
+            self.dismiss("all")
         elif event.button.id == "btn-no":
-            self._finish(False)
-
-    def _finish(self, result) -> None:
-        if not self._future.done():
-            self._future.set_result(result)
-        self.dismiss()
+            self.dismiss(False)

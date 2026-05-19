@@ -1,5 +1,3 @@
-import asyncio
-
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, Input
 from textual.containers import Vertical
@@ -7,11 +5,13 @@ from pydeepseek_tui.agent.activity import SessionActivityLogger
 from pydeepseek_tui.config.debug_logger import DebugLogger
 from pydeepseek_tui.providers.factory import ProviderFactory
 from pydeepseek_tui.agent import Agent, AgentMode
+from pydeepseek_tui.agent.loop import ConfirmationNeeded
 from pydeepseek_tui.agent.session import save_session
 from pydeepseek_tui.tools.registry import get_core_registry
 from pydeepseek_tui.tui.widgets.chat import ChatLog
 from pydeepseek_tui.tui.widgets.statusbar import StatusBar
 from pydeepseek_tui.tui.widgets.session_info import SessionInfo
+from textual import work
 
 MODE_CYCLE = [AgentMode.PLAN, AgentMode.AGENT, AgentMode.YOLO]
 
@@ -98,17 +98,38 @@ class PyDeepSeekApp(App[None]):
         info_widget = self.query_one(SessionInfo)
         info_widget.update_stats(stats)
 
+    # async def _tui_confirm(self, tool_name: str, args: str) -> bool:
+    #     import asyncio
+    #     from pydeepseek_tui.tui.widgets.confirm_screen import ConfirmScreen
+
+    #     screen = ConfirmScreen(tool_name, args)
+    #     loop = asyncio.get_running_loop()
+    #     future: asyncio.Future = loop.create_future()
+
+    #     def on_dismiss(result: object) -> None:
+    #         if not future.done():
+    #             future.set_result(result)
+
+    #     # push_screen sem wait_for_dismiss nao requer worker;
+    #     # o await aguarda a montagem do ecra; o future aguarda o dismiss.
+    #     await self.push_screen(screen, callback=on_dismiss)
+    #     result = await future
+
+    #     if result == "all":
+    #         self.mode = AgentMode.YOLO
+    #         self.agent.mode = self.mode
+    #         self.query_one(ChatLog).write_system(
+    #             "Modo alterado para YOLO: todas as operacoes serao executadas."
+    #         )
+    #         self._update_status()
+    #         return True
+
+    #     return bool(result)
     async def _tui_confirm(self, tool_name: str, args: str) -> bool:
         from pydeepseek_tui.tui.widgets.confirm_screen import ConfirmScreen
 
-        loop = asyncio.get_running_loop()
-        future: asyncio.Future = loop.create_future()
-
-        screen = ConfirmScreen(tool_name, args, future)
-        await self.push_screen(screen)
-        self.refresh()
-
-        result = await future
+        # Como agora rodaremos em um worker, push_screen_wait funcionará perfeitamente
+        result = await self.push_screen_wait(ConfirmScreen(tool_name, args))
 
         if result == "all":
             self.mode = AgentMode.YOLO
@@ -118,8 +139,8 @@ class PyDeepSeekApp(App[None]):
             )
             self._update_status()
             return True
-        return bool(result)
 
+        return bool(result)
     def action_save_and_quit(self) -> None:
         activity = SessionActivityLogger.get_instance()
         activity.update_metadata(
@@ -169,27 +190,36 @@ class PyDeepSeekApp(App[None]):
         self._update_status()
         self._refresh_session_stats()
         self.set_interval(5.0, self._refresh_session_stats)
-
-    async def on_input_submitted(self, event: Input.Submitted) -> None:
-        if not event.value.strip():
-            return
-
+    
+    @work
+    async def process_chat(self, user_text: str) -> None:
+        """Processa a comunicação com o Agente em um Worker assíncrono para não travar a UI."""
         log = self.query_one(ChatLog)
         input_widget = self.query_one(Input)
-
-        user_text = event.value
-        input_widget.value = ""
-        input_widget.disabled = True
 
         log.write_user_message(user_text)
         log.write_system("a pensar...")
 
         try:
             response_chunks: list[str] = []
-            async for chunk in self.agent.chat_stream(user_text):
-                response_chunks.append(chunk)
+            ag = self.agent.chat_stream(user_text)
+            try:
+                chunk = await ag.__anext__()
+                while True:
+                    if isinstance(chunk, ConfirmationNeeded):
+                        confirmed = await self._tui_confirm(
+                            chunk.tool_name, chunk.args
+                        )
+                        chunk = await ag.asend(confirmed)
+                    elif chunk.startswith("\n"):
+                        log.write_stream(chunk)
+                        chunk = await ag.__anext__()
+                    else:
+                        response_chunks.append(chunk)
+                        chunk = await ag.__anext__()
+            except StopAsyncIteration:
+                pass
 
-            # Escreve resposta acumulada para evitar quebras de linha por chunk
             full_response = "".join(response_chunks)
             if full_response.strip():
                 log.write_stream(full_response)
@@ -206,6 +236,68 @@ class PyDeepSeekApp(App[None]):
             input_widget.disabled = False
             input_widget.focus()
             self._refresh_session_stats()
+    # async def on_input_submitted(self, event: Input.Submitted) -> None:
+    #     if not event.value.strip():
+    #         return
 
+    #     log = self.query_one(ChatLog)
+    #     input_widget = self.query_one(Input)
+
+    #     user_text = event.value
+    #     input_widget.value = ""
+    #     input_widget.disabled = True
+
+    #     log.write_user_message(user_text)
+    #     log.write_system("a pensar...")
+
+    #     try:
+    #         response_chunks: list[str] = []
+    #         ag = self.agent.chat_stream(user_text)
+    #         try:
+    #             chunk = await ag.__anext__()
+    #             while True:
+    #                 if isinstance(chunk, ConfirmationNeeded):
+    #                     confirmed = await self._tui_confirm(
+    #                         chunk.tool_name, chunk.args
+    #                     )
+    #                     chunk = await ag.asend(confirmed)
+    #                 elif chunk.startswith("\n"):
+    #                     # Meta messages (tool execution, blocked, system) —
+    #                     # write immediately so the user sees progress.
+    #                     log.write_stream(chunk)
+    #                     chunk = await ag.__anext__()
+    #                 else:
+    #                     response_chunks.append(chunk)
+    #                     chunk = await ag.__anext__()
+    #         except StopAsyncIteration:
+    #             pass
+
+    #         full_response = "".join(response_chunks)
+    #         if full_response.strip():
+    #             log.write_stream(full_response)
+    #             debug = DebugLogger.get_instance()
+    #             if debug:
+    #                 debug.log_output(full_response)
+
+    #     except Exception as e:
+    #         log.write_error(str(e))
+    #         debug = DebugLogger.get_instance()
+    #         if debug:
+    #             debug.log_error(str(e))
+    #     finally:
+    #         input_widget.disabled = False
+    #         input_widget.focus()
+    #         self._refresh_session_stats()
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        if not event.value.strip():
+            return
+
+        input_widget = self.query_one(Input)
+        user_text = event.value
+        input_widget.value = ""
+        input_widget.disabled = True
+
+        # Delega o processamento pesado para o worker, liberando a interface
+        self.process_chat(user_text)
     def action_clear(self) -> None:
         self.query_one(ChatLog).clear()
