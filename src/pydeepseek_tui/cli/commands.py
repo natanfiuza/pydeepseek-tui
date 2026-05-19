@@ -78,7 +78,7 @@ def ensure_api_key(provider: str | None = None) -> str:
     if not api_key:
         provider_name = provider.capitalize()
         click.secho(
-            f"\nChave da API do {provider_name} nao encontrada!",
+            f"\nChave da API do {provider_name} não encontrada!",
             fg="yellow",
             bold=True,
         )
